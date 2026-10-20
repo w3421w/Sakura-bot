@@ -68,6 +68,12 @@ DEFAULTS: dict[str, Any] = {
         "auto_media_cooldown_seconds": 600,
         "auto_emotion_probability": 0.7,
     },
+    "hearthstone": {
+        "enabled": True,
+        "decks_path": "../knowledge/hearthstone/decks/latest.json",
+        "cards_path": "../data/hearthstone_cards.json",
+        "max_decks": 3,
+    },
     "search": {
         "enabled": True,
         "provider": "auto",
@@ -172,6 +178,10 @@ def load_config(path: str | Path) -> dict[str, Any]:
     assets_path = Path(result.get("assets", {}).get("path", ""))
     if str(assets_path) and not assets_path.is_absolute():
         result["assets"]["path"] = str((config_path.parent / assets_path).resolve())
+    for key in ("decks_path", "cards_path"):
+        deck_path = Path(result.get("hearthstone", {}).get(key, ""))
+        if str(deck_path) and not deck_path.is_absolute():
+            result["hearthstone"][key] = str((config_path.parent / deck_path).resolve())
     marker_path = Path(result["knowledge"].get("update_marker_path", ""))
     if str(marker_path) and not marker_path.is_absolute():
         result["knowledge"]["update_marker_path"] = str((config_path.parent / marker_path).resolve())

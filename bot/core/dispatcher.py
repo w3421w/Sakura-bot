@@ -19,6 +19,7 @@ from web.search import SearchClient, SearchResponse
 from core.tulpa_compat import TulpaPolicy
 from core.reply import split_reply
 from core.persona_switch import PersonaSwitchManager
+from knowledge.deck_advisor import DeckAdvisor
 from core.persona_lines import (
     BLACK_INSULT_LINES,
     BLACK_SWITCH_LINES,
@@ -89,6 +90,11 @@ class MessageDispatcher:
         )
         self._last_auto_media_at: dict[str, float] = {}
         self.emotion_media = EmotionMediaSelector(self.media, media_config)
+        try:
+            self.deck_advisor = DeckAdvisor(config)
+        except Exception:
+            LOG.exception("Hearthstone deck advisor failed to initialize")
+            self.deck_advisor = None
         self.persona_switch = PersonaSwitchManager(config, store)
         self.lines = LineRotator()
         self._last_black_reply: dict[int, str] = {}
@@ -799,9 +805,12 @@ class MessageDispatcher:
         if explicit_query == "":
             await self._send(transport, data, "用法：/搜索 关键词")
             return
-        auto_query = self._auto_search_query(text) if self.search_auto else ""
-        search_query = explicit_query or auto_query
+        deck_command = text.strip().startswith("/卡组")
         question = text
+        if deck_command:
+            question = text.strip()[3:].strip() or "推荐几套当前标准卡组"
+        auto_query = self._auto_search_query(text) if self.search_auto and not deck_command else ""
+        search_query = explicit_query or auto_query
         web_results: list[str] = []
         if search_query:
             if explicit_query:
@@ -825,11 +834,18 @@ class MessageDispatcher:
                 return
             if search_response.status == "ok":
                 web_results = SearchClient.format_for_prompt(search_response)
+        deck_context: list[str] = []
+        if self.deck_advisor is not None:
+            try:
+                deck_context = self.deck_advisor.context_for(question)
+            except Exception:
+                LOG.exception("Hearthstone deck context failed question=%r", question)
         LOG.info(
-            "dispatching message to LLM group_id=%s user_id=%s message_id=%s",
+            "dispatching message to LLM group_id=%s user_id=%s message_id=%s deck_context=%s",
             scope_id,
             data.user_id,
             data.message_id,
+            len(deck_context),
         )
         messages = self.prompts.build(
             scope_id,
@@ -837,6 +853,7 @@ class MessageDispatcher:
             question,
             include_history=opted_in,
             web_results=web_results,
+            deck_context=deck_context,
             message_id=data.message_id,
             persona_id=self.persona_switch.persona_for(scope_id) if not is_private else None,
         )

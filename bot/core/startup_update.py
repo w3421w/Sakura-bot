@@ -51,6 +51,13 @@ def run_startup_update(project_root: Path, bot_root: Path, config_path: Path, ti
             project_root / "tools" / "fetch_lol_schedule.py",
             ["--root", str(project_root / "knowledge" / "lol")],
         ),
+        (
+            project_root / "tools" / "fetch_hearthstone_decks.py",
+            [
+                "--root", str(project_root / "knowledge" / "hearthstone"),
+                "--cards-cache", str(project_root / "data" / "hearthstone_cards.json"),
+            ],
+        ),
     ]
     for script, extra_args in scripts:
         if not script.exists():

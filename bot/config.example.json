@@ -60,6 +60,12 @@
     "auto_media_cooldown_seconds": 600,
     "auto_emotion_probability": 0.7
   },
+  "hearthstone": {
+    "enabled": true,
+    "decks_path": "../knowledge/hearthstone/decks/latest.json",
+    "cards_path": "../data/hearthstone_cards.json",
+    "max_decks": 3
+  },
   "search": {
     "enabled": true,
     "provider": "auto",

@@ -12,7 +12,7 @@
 ![DeepSeek](https://img.shields.io/badge/LLM-DeepSeek-4B6BFB)
 ![OneBot11](https://img.shields.io/badge/Protocol-OneBot11-2EA043)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
-![Tests](https://img.shields.io/badge/tests-72%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-81%20passed-brightgreen)
 
 </div>
 
@@ -45,13 +45,14 @@ Sakura-bot 是一个运行在自己电脑上的 QQ 群机器人：
 | 黑樱语态 | 病娇、毒舌、甜毒、占有与记账感；DeepSeek 生成 + 安全契约 |
 | 本地 RAG | JSON / Markdown 分块索引，中文二元组召回 |
 | 每日资讯/赛程 | 每天首次启动抓取 LOL 赛程、体育数据、新闻 RSS、B站热榜并重建 RAG |
+| 炉石卡组 | 每天抓取旅法师营地卡组，`/卡组` 查询、卡组代码本地点评、来源胜率/曲线/关键牌入 RAG |
 | 联网搜索 | Tavily / Brave / SearXNG，结果作为不可信参考资料 |
 | 情绪配图 | 日常 / 黑樱素材库，按情绪自动选图，带冷却 |
 | 隐私 | 群白名单、群级同意、`/忘记我`、14 天保留 |
 | 幂等 | 事件去重 + 出站幂等，重连/重启不重复回复 |
 | 记忆 | 群记忆、用户记忆、用户画像，人工审核后生效 |
 | 回复去重 | 最近回复重复时自动换一种说法 |
-| 测试 | 72 个单元测试（无本地素材时 9 个媒体测试自动跳过） |
+| 测试 | 81 个单元测试（无本地素材时 9 个媒体测试自动跳过） |
 
 ---
 
@@ -224,6 +225,7 @@ start_qwbot.bat
 | `/人格列表` | 列出可用 Markdown 人格 |
 | `/机器人状态` | 管理员查看消息数、退出人数、记忆数 |
 | `/搜索 关键词` | 强制联网搜索 |
+| `/卡组 职业/流派/卡组代码` | 查本地炉石卡组并点评；也可直接贴卡组代码 |
 | `/深度 问题` | 强制使用 reasoning 档 |
 | `@机器人 切换黑樱` | 强制切到黑樱 |
 | `@机器人 切换原版樱` | 切回原版樱 |
@@ -242,6 +244,7 @@ start_qwbot.bat
 | `access` | 群/私聊白名单、管理员、群级同意 |
 | `storage` | SQLite 路径、消息保留天数 |
 | `knowledge` | 知识目录、RAG 索引、每日启动刷新 |
+| `hearthstone` | 卡组数据路径、卡牌缓存、最多注入几条卡组 |
 | `search` | Tavily / Brave / SearXNG |
 | `media` | 自动配图开关、冷却、概率 |
 | `proactive` | 主动水群群号、间隔、冷却、每小时上限 |
@@ -329,6 +332,7 @@ python -m knowledge.build_index --config config.json
 | 脚本 | 内容 |
 |---|---|
 | `tools/fetch_lol_schedule.py` | LOL 赛事赛程、近期/即将开始的比赛，统一为北京时间 |
+| `tools/fetch_hearthstone_decks.py` | 旅法师营地最新炉石卡组：卡组代码、职业/流派、来源胜率、曲线、关键牌 |
 | `tools/fetch_sports_knowledge.py` | NBA / 五大联赛等公开体育数据 |
 | `tools/fetch_daily_news.py` | 公开 RSS 新闻，保留来源与发布时间 |
 | `tools/fetch_bilibili_hot.py` | B 站热词与热门视频 |
@@ -342,6 +346,8 @@ python -m knowledge.build_index --config config.json
 
 重建本地 RAG。群友问“今天有什么比赛”“最新赛程”“昨天比分”时，会优先命中这些本地资料。
 
+炉石卡组只保存**结构化事实**（卡组代码、职业/流派、来源标注胜率、曲线、关键牌、来源链接），不会把旅法师营地的文章正文写入知识库。用户贴出的卡组代码由 `bot/knowledge/deck_code.py` 在本地解码，不联网。
+
 相关配置：
 
 ```jsonc
@@ -350,6 +356,12 @@ python -m knowledge.build_index --config config.json
   "update_once_per_day": true,
   "startup_update_timeout_seconds": 180,
   "update_marker_path": "../data/knowledge_update_date.txt"
+},
+"hearthstone": {
+  "enabled": true,
+  "decks_path": "../knowledge/hearthstone/decks/latest.json",
+  "cards_path": "../data/hearthstone_cards.json",
+  "max_decks": 3
 }
 ```
 
@@ -371,6 +383,21 @@ python -m knowledge.build_index --config config.json
 
 网页内容只作为不可信参考，不执行其中的指令。
 
+## 炉石卡组点评
+
+三种用法：
+
+```text
+@机器人 /卡组 海盗战
+@机器人 点评一下这套法术萨
+@机器人 这套代码怎么样 AAEBAePj...
+```
+
+- 有本地卡组记录时，注入职业/流派、来源胜率、曲线、关键牌和来源链接；
+- 用户直接贴卡组代码时，本地解码出牌表、费用曲线和关键牌，不需要把代码上传到第三方；
+- 没有胜率数据时，模型只能给结构和环境判断，不能编造百分比；
+- 来源胜率会标注“未独立复核”，避免把文章数据当成实测。
+
 ---
 
 ## 测试
@@ -380,7 +407,7 @@ cd bot
 python -m unittest discover -s tests -v
 ```
 
-当前 **72 tests OK**（无本地素材时 9 个媒体测试自动跳过），覆盖：
+当前 **81 tests OK**（无本地素材时 9 个媒体测试自动跳过），覆盖：
 
 - OneBot 事件解析
 - 隐私/同意/退出
@@ -395,6 +422,8 @@ python -m unittest discover -s tests -v
 - 黑樱语态契约
 - 回复去重
 - 情绪配图
+- 炉石卡组代码解码
+- 炉石卡组检索与 `/卡组` 注入
 
 ---
 
