@@ -1,0 +1,179 @@
+{
+  "onebot": {
+    "ws_url": "ws://127.0.0.1:3001",
+    "access_token": "",
+    "reconnect_seconds": 5
+  },
+  "llm": {
+    "provider": "deepseek"
+  },
+  "deepseek": {
+    "base_url": "https://api.deepseek.com",
+    "model": "deepseek-flash",
+    "thinking": "disabled",
+    "api_key_env": "DEEPSEEK_API_KEY",
+    "api_key_file": "secrets/deepseek_api_key.txt",
+    "timeout_seconds": 45,
+    "temperature": 0.7,
+    "max_tokens": 600,
+    "reasoning": {
+      "model": "deepseek-flash",
+      "thinking": "enabled",
+      "reasoning_effort": "high",
+      "max_tokens": 1200
+    }
+  },
+  "access": {
+    "allowed_group_ids": [
+      123456789
+    ],
+    "allowed_private_user_ids": [],
+    "require_group_whitelist": true,
+    "admin_user_ids": [],
+    "group_consent_confirmed": false,
+    "require_user_consent": true,
+    "allow_private_messages": false
+  },
+  "storage": {
+    "db_path": "../data/qwbot.sqlite3",
+    "retention_days": 14
+  },
+  "knowledge": {
+    "path": "../knowledge",
+    "update_on_start": true,
+    "update_once_per_day": true,
+    "update_marker_path": "../data/knowledge_update_date.txt",
+    "startup_update_timeout_seconds": 180,
+    "max_results": 4,
+    "max_chars": 2600,
+    "chunk_chars": 1800,
+    "min_score": 6,
+    "index_path": "../data/rag.sqlite3"
+  },
+  "assets": {
+    "path": "../assets",
+    "max_file_bytes": 8388608,
+    "max_segments": 8
+  },
+  "media": {
+    "auto_emotion_enabled": true,
+    "auto_media_cooldown_seconds": 600,
+    "auto_emotion_probability": 0.7
+  },
+  "search": {
+    "enabled": true,
+    "provider": "auto",
+    "tavily_api_key_env": "TAVILY_API_KEY",
+    "tavily_api_key_file": "secrets/tavily_api_key.txt",
+    "brave_api_key_env": "BRAVE_SEARCH_API_KEY",
+    "searxng_url": "",
+    "max_results": 4,
+    "max_query_chars": 240,
+    "max_content_chars": 900,
+    "timeout_seconds": 15,
+    "cache_seconds": 900,
+    "language": "zh-CN",
+    "country": "CN",
+    "auto": true
+  },
+  "memory": {
+    "candidate_extraction_enabled": true,
+    "max_candidates_per_message": 2
+  },
+  "proactive": {
+    "enabled": false,
+    "group_ids": [
+      123456789
+    ],
+    "interval_seconds": 45,
+    "min_silence_seconds": 20,
+    "cooldown_seconds": 180,
+    "active_window_seconds": 900,
+    "max_replies_per_hour": 5,
+    "max_reply_chars": 120,
+    "water_group_mode": true
+  },
+  "persona": {
+    "directory": "persona",
+    "active": "sakura_winter"
+  },
+  "persona_switch": {
+    "enabled": true,
+    "sakura_persona": "sakura_winter",
+    "black_persona": "sakura_black",
+    "sakura_avatar": "../assets/stickers/sakura_official_thumb.png",
+    "black_avatar": "../assets/avatars/black_sakura_qq_v2.png",
+    "address_aliases": {},
+    "insult_threshold": 3,
+    "quiet_seconds": 1800,
+    "insult_keywords": [
+      "婊子",
+      "鸡",
+      "烧鸡",
+      "烧货",
+      "骚货",
+      "贱人",
+      "臭婊",
+      "傻逼",
+      "傻比",
+      "煞笔",
+      "沙币",
+      "杀币",
+      "傻吊",
+      "傻屌",
+      "傻卵",
+      "脑残",
+      "脑瘫",
+      "智障",
+      "弱智",
+      "废物",
+      "蠢货",
+      "垃圾",
+      "狗东西",
+      "狗逼",
+      "畜生",
+      "出生",
+      "孤儿",
+      "小丑",
+      "沙雕",
+      "下头",
+      "神经病",
+      "有病",
+      "草泥马",
+      "cnm",
+      "nmsl",
+      "wdnmd",
+      "mdzz",
+      "sb",
+      "ntm",
+      "fw"
+    ],
+    "directed_names": [
+      "樱",
+      "间桐樱",
+      "黑樱",
+      "桜",
+      "sakura"
+    ]
+  },
+  "tulpa": {
+    "style_guidance": true
+  },
+  "transport": {
+    "event_dedup_ttl_seconds": 604800,
+    "outbound_retry_after_seconds": 30
+  },
+  "bot": {
+    "max_context_messages": 10,
+    "max_user_history": 5,
+    "max_user_dialogue_messages": 8,
+    "max_group_reference_messages": 4,
+    "max_context_chars": 3000,
+    "max_prompt_chars": 9000,
+    "max_memory_chars": 1800,
+    "max_user_memory_chars": 1200,
+    "max_reply_chars": 600,
+    "max_reply_parts": 4,
+    "reply_split_delay_seconds": 0.35
+  }
+}

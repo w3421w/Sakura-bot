@@ -1,0 +1,87 @@
+{
+  "daily": {
+    "happy": [
+      "sakura_user_happy_laugh",
+      "sakura_user_smile_closed",
+      "sakura_user_spring_smile",
+      "sakura_user_white_dress_smile",
+      "sakura_user_gentle_smile",
+      "sakura_user_soft_gaze",
+      "sakura_user_warm_greeting"
+    ],
+    "shy": [
+      "sakura_user_shy_soft",
+      "sakura_user_blush_shy",
+      "sakura_user_winter_shy"
+    ],
+    "sad": [
+      "sakura_user_sleepy",
+      "sakura_user_rainy_phone",
+      "sakura_user_flower_calm"
+    ],
+    "confused": [
+      "sakura_user_confused",
+      "sakura_user_chibi_surprised",
+      "sakura_user_deadpan"
+    ],
+    "playful": [
+      "sakura_user_soft_smile",
+      "sakura_user_smile_closed",
+      "sakura_user_casual_garden"
+    ],
+    "sleepy": [
+      "sakura_user_sleepy",
+      "sakura_user_blossom_rest"
+    ],
+    "gentle": [
+      "sakura_user_gentle_smile",
+      "sakura_user_flower_calm",
+      "sakura_user_closeup_soft",
+      "sakura_user_kimono_calm",
+      "sakura_user_soft_gaze",
+      "sakura_user_warm_greeting"
+    ],
+    "surprised": [
+      "sakura_user_chibi_surprised",
+      "sakura_user_refuse_meme"
+    ]
+  },
+  "black": {
+    "calm": [
+      "black_sakura_calm_closed_eye"
+    ],
+    "dark_smile": [
+      "black_sakura_dark_smile"
+    ],
+    "warning": [
+      "black_sakura_warning"
+    ],
+    "provoking": [
+      "black_sakura_provoking"
+    ],
+    "invite": [
+      "black_sakura_invite"
+    ],
+    "manic_laugh": [
+      "black_sakura_manic_laugh"
+    ]
+  },
+  "keywords": {
+    "happy": ["开心", "高兴", "哈哈", "笑", "太好了", "赢了", "成功", "棒", "好耶", "可爱"],
+    "shy": ["害羞", "脸红", "不好意思", "夸", "喜欢", "想你", "心动", "可爱"],
+    "sad": ["累", "难过", "伤心", "哭", "委屈", "失落", "生病", "不舒服", "失眠", "压力", "烦", "想哭"],
+    "confused": ["疑惑", "不懂", "什么", "为什么", "居然", "没想到", "真的吗", "啊？", "?"],
+    "playful": ["玩", "梗", "逗", "调皮", "坏", "吃醋", "别人", "离开", "不许", "只能", "我的"],
+    "sleepy": ["困", "睡", "晚安", "熬夜", "通宵"],
+    "gentle": ["陪", "安慰", "抱", "温柔", "照顾", "在一起", "别难过", "没事"],
+    "surprised": ["惊讶", "震惊", "居然", "没想到", "真的吗", "啊？"]
+  },
+  "black_emotions": {
+    "possessive": ["吃醋", "别人", "离开", "不许", "只能", "我的", "记住", "怕", "和谁", "喜欢"],
+    "warning": ["骂", "滚", "傻", "侮辱", "闭嘴", "烦", "fw"],
+    "playful": ["玩", "挑衅", "调皮", "坏", "赌", "继续", "惩罚"]
+  },
+  "black_priority": ["warning", "possessive", "playful", "calm"],
+  "daily_priority": ["sad", "sleepy", "shy", "happy", "confused", "playful", "gentle", "surprised"],
+  "serious_markers": ["代码", "报错", "作业", "翻译", "搜索", "新闻", "价格", "赛程", "比分", "方案", "分析", "原理", "步骤"]
+}
