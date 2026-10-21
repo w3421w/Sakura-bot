@@ -292,6 +292,27 @@ function Ensure-NapCatWorker {
     }
 
     if ($worker.Count -gt 0) {
+        # NapCat reads its OneBot config during Worker startup.  If the config
+        # was repaired after this Worker started, the Worker is running with the
+        # old empty network config and will never open 3001.  Restart it once so
+        # it reloads the server entry instead of waiting forever for QR/login.
+        try {
+            $workerStart = ($worker | Sort-Object StartTime | Select-Object -First 1).StartTime
+            $configTime = (Get-Item -LiteralPath $NapCatOneBotConfig -ErrorAction Stop).LastWriteTime
+            if ($configTime -gt $workerStart.AddSeconds(2) -and
+                ((Get-Date) - $workerStart).TotalSeconds -gt 15) {
+                Write-LauncherLog "REPAIR NapCat Worker started before OneBot config; restarting Worker tree"
+                foreach ($item in $worker) {
+                    & taskkill.exe /PID ([int]$item.Id) /T /F 2>$null | Out-Null
+                }
+                $script:LastLauncherStart = [datetime]::MinValue
+                return
+            }
+        }
+        catch {
+            # Process timestamps can be unavailable under restricted process
+            # permissions; fall back to the existing wait/QR path below.
+        }
         if ((Get-Date) - $script:LastWaitingLog -gt [timespan]::FromSeconds(60)) {
             Write-LauncherLog 'WAIT OneBot port is closed; NapCat Worker exists and may be waiting for QQ login/QR verification'
             $script:LastWaitingLog = Get-Date
