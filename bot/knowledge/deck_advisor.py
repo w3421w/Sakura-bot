@@ -78,6 +78,7 @@ class DeckAdvisor:
         self._decks: list[dict[str, Any]] = []
         self._deck_mtime: float = -1.0
         self._cards: dict[int, dict[str, Any]] | None = None
+        self._last_by_scope: dict[int, list[dict[str, Any]]] = {}
         self._load_decks()
 
     @staticmethod
@@ -190,44 +191,124 @@ class DeckAdvisor:
             f"职业：{summary['class_zh']}；牌数：{summary['total']}。",
             f"费用曲线：{self._format_curve(summary['curve'])}。",
             f"关键牌/高频牌：{key_cards}。",
-            "点评时请按：曲线与节奏、关键牌配合、起手留牌、优势/劣势对局、适合分段和改牌方向；"
-            "没有胜率数据就不要编造具体百分比。",
+            "点评时只给2-3句、总计不超过120字：一句强度/定位，一句关键打法或注意点；"
+            "不要贴整副牌表，也不要在没有胜率数据时编造百分比。",
         ]
         return ["\n".join(lines)]
 
-    def _format_deck(self, deck: dict[str, Any]) -> str:
+    def _format_deck(self, deck: dict[str, Any], *, include_code: bool = True, detailed: bool = True) -> str:
         fields = [
             f"来源：{deck.get('source') or '旅法师营地'}《{deck.get('title') or '未命名'}》"
             f"{('（' + str(deck.get('published')) + '）') if deck.get('published') else ''}",
             f"职业/流派：{deck.get('class_zh') or '未知'} / {deck.get('archetype') or '未标注'}",
         ]
-        if deck.get("strength_note"):
+        if detailed and deck.get("strength_note"):
             fields.append(f"强度：{deck['strength_note']}")
         if deck.get("curve_profile"):
             fields.append(f"曲线定位：{deck['curve_profile']}")
         key_cards = deck.get("key_cards")
-        if isinstance(key_cards, list) and key_cards:
+        if detailed and isinstance(key_cards, list) and key_cards:
             names = "、".join(
                 f"{item.get('count', 1)}x{item.get('name')}" if isinstance(item, dict) else str(item)
                 for item in key_cards[:8]
             )
             fields.append(f"关键牌：{names}")
         curve = deck.get("curve")
-        if isinstance(curve, dict):
+        if detailed and isinstance(curve, dict):
             fields.append(f"曲线：{self._format_curve(curve)}")
-        if deck.get("deck_code"):
+        if include_code and deck.get("deck_code"):
             fields.append(f"卡组代码：{deck['deck_code']}")
-        if deck.get("source_url"):
+        if detailed and deck.get("source_url"):
             fields.append(f"来源链接：{deck['source_url']}")
         return "\n".join(fields)
 
-    def context_for(self, text: str) -> list[str]:
+    def _format_recommendation(self, index: int, deck: dict[str, Any]) -> str:
+        winrate = deck.get("winrate")
+        strength = (
+            f"来源胜率约{winrate:g}%（未复核）"
+            if isinstance(winrate, (int, float))
+            else "来源未给胜率"
+        )
+        return (
+            f"{index}. {deck.get('name') or deck.get('archetype') or '未命名'}"
+            f"｜{deck.get('class_zh') or '未知'}/{deck.get('format') or '未知'}"
+            f"｜{deck.get('curve_profile') or '曲线未知'}｜{strength}"
+        )
+
+    def _ordinal_index(self, text: str) -> int | None:
+        raw = str(text or "")
+        if re.search(r"最后(一)?套|末套", raw):
+            return -1
+        match = re.search(r"第\s*([一二三四五六七八九十两\d]+)\s*(?:套|个|副)", raw)
+        if match:
+            token = match.group(1)
+            values = {
+                "一": 1, "二": 2, "三": 3, "四": 4, "五": 5,
+                "六": 6, "七": 7, "八": 8, "九": 9, "十": 10,
+                "两": 2,
+            }
+            try:
+                number = int(token)
+            except ValueError:
+                number = values.get(token, 0)
+            return max(0, number - 1) if number else None
+        if re.search(r"这(一)?套|那(一)?套|上一套|刚才那套|前面那套", raw):
+            return 0
+        return None
+
+    def _selected_followup(self, text: str, scope_id: int) -> dict[str, Any] | None:
+        decks = self._last_by_scope.get(int(scope_id)) or []
+        if not decks:
+            return None
+        index = self._ordinal_index(text)
+        if index is None:
+            return None
+        if index < 0:
+            index = len(decks) - 1
+        if 0 <= index < len(decks):
+            return dict(decks[index])
+        return None
+
+    def followup_code(self, text: str, scope_id: int) -> dict[str, Any] | None:
+        """Resolve “第一套/给我代码” to a deck without asking the model."""
+        decks = self._last_by_scope.get(int(scope_id)) or []
+        if not decks:
+            return None
+        raw = str(text or "")
+        index = self._ordinal_index(raw)
+        full_ordinal = bool(re.fullmatch(r"\s*第\s*[一二三四五六七八九十两\d]+\s*套\s*", raw))
+        wants_code = any(term in raw for term in ("代码", "复制", "发我", "给我", "贴一下", "要一下"))
+        if index is None:
+            if wants_code and len(decks) == 1:
+                index = 0
+            elif wants_code and re.search(r"这套|那套|上一套", raw):
+                index = 0
+            else:
+                return None
+        if not (wants_code or full_ordinal):
+            return None
+        if index < 0:
+            index = len(decks) - 1
+        if 0 <= index < len(decks):
+            return dict(decks[index])
+        return None
+
+    def context_for(self, text: str, scope_id: int = 0) -> list[str]:
         """Return bounded RAG-like context blocks for a deck-related message."""
         if not self.enabled:
             return []
         code = deck_code_in_text(text)
         if code:
             return self._format_code_context(code)
+        selected = self._selected_followup(text, scope_id)
+        if selected is not None:
+            blocks = [
+                "【用户选中的上一轮卡组】",
+                self._format_deck(selected, include_code=False, detailed=True),
+                "如果用户在问代码，代码由程序单独发送；如果是在问点评，只给2-3句、总计不超过120字，"
+                "不要输出卡组代码、不要重复整套牌表。",
+            ]
+            return blocks
         if not self.is_deck_query(text):
             return []
         decks = self.find_decks(text)
@@ -236,12 +317,15 @@ class DeckAdvisor:
                 "【炉石卡组资料】本地卡组库暂无命中记录。不要编造具体胜率或排名；"
                 "可以给通用的构筑/曲线建议，并提示用户提供卡组代码或最新环境数据。"
             ]
+        if scope_id is not None:
+            self._last_by_scope[int(scope_id)] = [dict(deck) for deck in decks]
         blocks = ["【炉石卡组资料｜来自本地 RAG，非官方】"]
         for index, deck in enumerate(decks, 1):
-            blocks.append(f"{index}. {self._format_deck(deck)}")
+            blocks.append(self._format_recommendation(index, deck))
         blocks.append(
-            "点评要求：先给一句强度结论，再说曲线/关键牌/起手与对局，最后给是否推荐；"
-            "资料里的胜率只代表来源文章，不要当成你的独立实测。"
+            "推荐要求：最多列3套，每套只写“名称：一句话”；总字数不超过150字；"
+            "不要输出完整卡组代码；用户要具体某套代码时由程序发送。"
+            "资料里的胜率只代表来源文章，没有数据时不要编造。"
         )
         return blocks
 

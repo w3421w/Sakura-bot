@@ -342,9 +342,9 @@ class PromptBuilder:
             user_content += (
                 "\n\n【炉石卡组资料，个人整理，非官方】\n"
                 + "\n\n".join(deck_items)
-                + "\n点评要求：先用一句话给强度/环境结论，再按曲线、关键牌、起手留牌、优势/劣势对局、"
-                "适合分段和改牌方向展开；资料中的胜率只代表来源文章，未独立复核，不得编造其他百分比或排名；"
-                "用户贴的卡组代码按本地解析结果点评，不要假装已经实战测试过。"
+                + "\n点评要求：最多2-3句、总计不超过120字；先给结论，再给一句关键打法或注意点；"
+                "推荐多套时每套只写一行；不要输出完整卡组代码（代码由程序单独发送）；"
+                "资料中的胜率只代表来源文章，未独立复核，不得编造其他百分比或排名。"
             )
         if len(user_content) > self.max_prompt_chars:
             # Preserve the current question and trim the oldest/least important

@@ -837,9 +837,35 @@ class MessageDispatcher:
         deck_context: list[str] = []
         if self.deck_advisor is not None:
             try:
-                deck_context = self.deck_advisor.context_for(question)
+                deck_context = self.deck_advisor.context_for(question, scope_id=scope_id)
             except Exception:
                 LOG.exception("Hearthstone deck context failed question=%r", question)
+
+        # “给我第一套 / 第一套代码” must not depend on the model remembering
+        # to paste a long code.  The advisor owns the previous recommendation
+        # list and sends the exact code in one message.
+        if self.deck_advisor is not None:
+            try:
+                selected = self.deck_advisor.followup_code(question, scope_id)
+            except Exception:
+                LOG.exception("Hearthstone deck code follow-up failed question=%r", question)
+                selected = None
+            if selected and selected.get("deck_code"):
+                label = self.store.user_label(scope_id, data.user_id)
+                name = selected.get("name") or selected.get("archetype") or "这套卡组"
+                code = str(selected["deck_code"])
+                intro = f"好的，{label}。{name}的代码："
+                await self._send(transport, data, f"{intro}\n{code}")
+                if opted_in:
+                    self.store.add_message(
+                        scope_id,
+                        0,
+                        f"{intro}\n{code}",
+                        is_bot=True,
+                        sender_info={"is_bot": True, "target_user_id": data.user_id},
+                    )
+                return
+
         LOG.info(
             "dispatching message to LLM group_id=%s user_id=%s message_id=%s deck_context=%s",
             scope_id,

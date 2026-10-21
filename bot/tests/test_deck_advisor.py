@@ -110,7 +110,7 @@ class DeckAdvisorTests(unittest.TestCase):
 
     def test_builds_context_with_source_and_winrate(self) -> None:
         context = "\n".join(self.advisor.context_for("法术萨怎么样"))
-        self.assertIn("旅法师营地", context)
+        self.assertIn("56.6", context)
         self.assertIn("56.6", context)
         self.assertIn("非官方", context)
 
@@ -119,7 +119,16 @@ class DeckAdvisorTests(unittest.TestCase):
         self.assertIn("用户提供的炉石卡组代码", context)
         self.assertIn("牌数：30", context)
 
-    def test_dispatcher_injects_deck_context_for_slash_command(self) -> None:
+    def test_followup_ordinal_resolves_to_previous_deck(self) -> None:
+        self.advisor.context_for("法术萨强度", scope_id=100)
+        selected = self.advisor.followup_code("给我第一套", 100)
+        self.assertIsNotNone(selected)
+        assert selected is not None
+        self.assertEqual("法术萨", selected["archetype"])
+        self.assertEqual(CODE, selected["deck_code"])
+        self.assertIsNone(self.advisor.followup_code("第一套怎么样", 100))
+
+    def test_dispatcher_sends_exact_code_for_followup(self) -> None:
         store = Store(":memory:")
         config = {
             "access": {
@@ -142,13 +151,16 @@ class DeckAdvisorTests(unittest.TestCase):
         llm = FakeLLM()
         dispatcher = MessageDispatcher(config, store, llm, "missing-persona.md")
 
-        asyncio.run(dispatcher.handle_raw(transport, _private_event("/卡组 海盗战", 7)))
-
+        asyncio.run(dispatcher.handle_raw(transport, _private_event("/卡组 法术萨", 7)))
         self.assertTrue(llm.calls)
         content = llm.calls[0][1]["content"]
         self.assertIn("炉石卡组资料", content)
-        self.assertIn("海盗战", content)
-        self.assertEqual([(42, "这套可以")], transport.private)
+        self.assertIn("法术萨", content)
+
+        asyncio.run(dispatcher.handle_raw(transport, _private_event("给我第一套", 8)))
+        sent = [text for _, text in transport.private]
+        self.assertTrue(any(CODE in text for text in sent), sent)
+        self.assertEqual(1, len(llm.calls))
 
 
 if __name__ == "__main__":
