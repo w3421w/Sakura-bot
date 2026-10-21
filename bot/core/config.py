@@ -73,6 +73,7 @@ DEFAULTS: dict[str, Any] = {
         "decks_path": "../knowledge/hearthstone/decks/latest.json",
         "cards_path": "../data/hearthstone_cards.json",
         "max_decks": 3,
+        "max_review_chars": 120,
     },
     "search": {
         "enabled": True,

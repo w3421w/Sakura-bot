@@ -276,8 +276,8 @@ class DeckAdvisor:
             return None
         raw = str(text or "")
         index = self._ordinal_index(raw)
-        full_ordinal = bool(re.fullmatch(r"\s*第\s*[一二三四五六七八九十两\d]+\s*套\s*", raw))
         wants_code = any(term in raw for term in ("代码", "复制", "发我", "给我", "贴一下", "要一下"))
+        has_review = any(term in raw for term in REVIEW_TERMS)
         if index is None:
             if wants_code and len(decks) == 1:
                 index = 0
@@ -285,7 +285,11 @@ class DeckAdvisor:
                 index = 0
             else:
                 return None
-        if not (wants_code or full_ordinal):
+        # “第一套” alone, including “？喂 @bot 第一套”, means send the code.
+        # “第一套怎么样/强度” is a review, so leave it to the model.
+        if has_review and not wants_code:
+            return None
+        if not wants_code and index is None:
             return None
         if index < 0:
             index = len(decks) - 1

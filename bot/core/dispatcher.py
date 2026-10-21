@@ -73,6 +73,9 @@ class MessageDispatcher:
         self.require_user_consent = bool(access.get("require_user_consent", True))
         self.allow_private = bool(access.get("allow_private_messages", False))
         self.max_reply_chars = int(config.get("bot", {}).get("max_reply_chars", 600))
+        self.deck_review_max_chars = max(
+            80, int(config.get("hearthstone", {}).get("max_review_chars", 120))
+        )
         bot_config = config.get("bot", {})
         self.max_reply_parts = max(1, int(bot_config.get("max_reply_parts", 3)))
         self.reply_split_delay = max(0.0, float(bot_config.get("reply_split_delay_seconds", 0.35)))
@@ -471,6 +474,23 @@ class MessageDispatcher:
             if source in result:
                 result = result.replace(source, mapping[source])
         return re.sub(r"前辈(?:前辈)+", "前辈", result)
+
+    def _shorten_deck_review(self, answer: str) -> str:
+        """Hard-cap deck commentary; prompt instructions alone are not reliable."""
+        text = str(answer or "").strip()
+        limit = self.deck_review_max_chars
+        if len(text) <= limit or "AAE" in text:
+            return text
+        parts = re.split(r"(?<=[。！？!?；;])", text)
+        short = ""
+        for part in parts:
+            if len(short) + len(part) > limit:
+                break
+            short += part
+        short = short.strip()
+        if short:
+            return short
+        return text[: max(0, limit - 1)].rstrip() + "…"
 
     def _apply_media_policy(self, answer: str, question: str, scope_id: str) -> str:
         """Allow one emotion-matched image, with explicit requests bypassing cooldown."""
@@ -896,6 +916,8 @@ class MessageDispatcher:
             answer = "模型暂时不可用，稍后再试。"
         answer = self._sanitize_addressing(answer or "（模型没有返回内容）").strip()[: self.max_reply_chars]
         answer = self._enforce_member_address(answer, scope_id)
+        if deck_context:
+            answer = self._shorten_deck_review(answer)
         recent_replies = self.recent_reply_texts(scope_id, 3)
         if answer != "模型暂时不可用，稍后再试。" and self.is_duplicate_reply(
             answer, scope_id, recent_replies

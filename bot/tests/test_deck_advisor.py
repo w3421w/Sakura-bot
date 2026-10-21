@@ -126,6 +126,7 @@ class DeckAdvisorTests(unittest.TestCase):
         assert selected is not None
         self.assertEqual("法术萨", selected["archetype"])
         self.assertEqual(CODE, selected["deck_code"])
+        self.assertIsNotNone(self.advisor.followup_code("？喂 @间桐樱 第一套", 100))
         self.assertIsNone(self.advisor.followup_code("第一套怎么样", 100))
 
     def test_dispatcher_sends_exact_code_for_followup(self) -> None:
@@ -161,6 +162,7 @@ class DeckAdvisorTests(unittest.TestCase):
         sent = [text for _, text in transport.private]
         self.assertTrue(any(CODE in text for text in sent), sent)
         self.assertEqual(1, len(llm.calls))
+        self.assertLessEqual(len(dispatcher._shorten_deck_review("一" * 300)), 120)
 
 
 if __name__ == "__main__":
