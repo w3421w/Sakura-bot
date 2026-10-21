@@ -191,7 +191,7 @@ class DeckAdvisor:
             f"职业：{summary['class_zh']}；牌数：{summary['total']}。",
             f"费用曲线：{self._format_curve(summary['curve'])}。",
             f"关键牌/高频牌：{key_cards}。",
-            "点评时只给2-3句、总计不超过120字：一句强度/定位，一句关键打法或注意点；"
+            "点评时只给1-2句、40-60字，绝对不超过80字：一句强度/定位，一句关键打法或注意点；"
             "不要贴整副牌表，也不要在没有胜率数据时编造百分比。",
         ]
         return ["\n".join(lines)]
@@ -223,16 +223,9 @@ class DeckAdvisor:
         return "\n".join(fields)
 
     def _format_recommendation(self, index: int, deck: dict[str, Any]) -> str:
-        winrate = deck.get("winrate")
-        strength = (
-            f"来源胜率约{winrate:g}%（未复核）"
-            if isinstance(winrate, (int, float))
-            else "来源未给胜率"
-        )
         return (
             f"{index}. {deck.get('name') or deck.get('archetype') or '未命名'}"
-            f"｜{deck.get('class_zh') or '未知'}/{deck.get('format') or '未知'}"
-            f"｜{deck.get('curve_profile') or '曲线未知'}｜{strength}"
+            f"（{deck.get('class_zh') or '未知'}，{deck.get('curve_profile') or '曲线未知'}）"
         )
 
     def _ordinal_index(self, text: str) -> int | None:
@@ -297,6 +290,30 @@ class DeckAdvisor:
             return dict(decks[index])
         return None
 
+    def short_review(self, text: str, scope_id: int = 0) -> str:
+        """Deterministic fallback when the model still writes too much."""
+        selected = self._selected_followup(text, scope_id)
+        if selected is not None:
+            return self._one_line_review(selected)
+        decks = self._last_by_scope.get(int(scope_id)) or []
+        if decks:
+            names = "、".join(
+                str(deck.get("name") or deck.get("archetype") or "未命名")[:12]
+                for deck in decks[:2]
+            )
+            return f"今天可看：{names}。想看哪套？"
+        return ""
+
+    @staticmethod
+    def _one_line_review(deck: dict[str, Any]) -> str:
+        name = str(deck.get("name") or deck.get("archetype") or "这套")[:20]
+        profile = str(deck.get("curve_profile") or "")
+        if "快攻" in profile or "节奏" in profile:
+            return f"{name}偏快攻，抢节奏，怕解场。"
+        if "控制" in profile or "后期" in profile:
+            return f"{name}偏控制，吃资源，怕被抢死。"
+        return f"{name}偏中速，靠节奏和关键牌。"
+
     def context_for(self, text: str, scope_id: int = 0) -> list[str]:
         """Return bounded RAG-like context blocks for a deck-related message."""
         if not self.enabled:
@@ -309,7 +326,7 @@ class DeckAdvisor:
             blocks = [
                 "【用户选中的上一轮卡组】",
                 self._format_deck(selected, include_code=False, detailed=True),
-                "如果用户在问代码，代码由程序单独发送；如果是在问点评，只给2-3句、总计不超过120字，"
+                "如果用户在问代码，代码由程序单独发送；如果是在问点评，只给1-2句、40-60字，绝对不超过80字，"
                 "不要输出卡组代码、不要重复整套牌表。",
             ]
             return blocks
@@ -327,7 +344,7 @@ class DeckAdvisor:
         for index, deck in enumerate(decks, 1):
             blocks.append(self._format_recommendation(index, deck))
         blocks.append(
-            "推荐要求：最多列3套，每套只写“名称：一句话”；总字数不超过150字；"
+            "推荐要求：最多列3套，每套只写“名称（职业，曲线）”；1-2句、40-60字、绝对不超过80字；"
             "不要输出完整卡组代码；用户要具体某套代码时由程序发送。"
             "资料里的胜率只代表来源文章，没有数据时不要编造。"
         )

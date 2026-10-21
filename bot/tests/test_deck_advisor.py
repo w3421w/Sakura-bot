@@ -110,8 +110,8 @@ class DeckAdvisorTests(unittest.TestCase):
 
     def test_builds_context_with_source_and_winrate(self) -> None:
         context = "\n".join(self.advisor.context_for("法术萨怎么样"))
-        self.assertIn("56.6", context)
-        self.assertIn("56.6", context)
+        self.assertIn("法术萨", context)
+        self.assertIn("法术萨", context)
         self.assertIn("非官方", context)
 
     def test_user_deck_code_is_decoded_locally(self) -> None:
@@ -128,6 +128,7 @@ class DeckAdvisorTests(unittest.TestCase):
         self.assertEqual(CODE, selected["deck_code"])
         self.assertIsNotNone(self.advisor.followup_code("？喂 @间桐樱 第一套", 100))
         self.assertIsNone(self.advisor.followup_code("第一套怎么样", 100))
+        self.assertLessEqual(len(self.advisor.short_review("第一套怎么样", 100)), 80)
 
     def test_dispatcher_sends_exact_code_for_followup(self) -> None:
         store = Store(":memory:")
@@ -162,7 +163,6 @@ class DeckAdvisorTests(unittest.TestCase):
         sent = [text for _, text in transport.private]
         self.assertTrue(any(CODE in text for text in sent), sent)
         self.assertEqual(1, len(llm.calls))
-        self.assertLessEqual(len(dispatcher._shorten_deck_review("一" * 300)), 120)
 
 
 if __name__ == "__main__":

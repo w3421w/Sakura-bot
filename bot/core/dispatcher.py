@@ -74,7 +74,7 @@ class MessageDispatcher:
         self.allow_private = bool(access.get("allow_private_messages", False))
         self.max_reply_chars = int(config.get("bot", {}).get("max_reply_chars", 600))
         self.deck_review_max_chars = max(
-            80, int(config.get("hearthstone", {}).get("max_review_chars", 120))
+            80, int(config.get("hearthstone", {}).get("max_review_chars", 80))
         )
         bot_config = config.get("bot", {})
         self.max_reply_parts = max(1, int(bot_config.get("max_reply_parts", 3)))
@@ -474,23 +474,6 @@ class MessageDispatcher:
             if source in result:
                 result = result.replace(source, mapping[source])
         return re.sub(r"前辈(?:前辈)+", "前辈", result)
-
-    def _shorten_deck_review(self, answer: str) -> str:
-        """Hard-cap deck commentary; prompt instructions alone are not reliable."""
-        text = str(answer or "").strip()
-        limit = self.deck_review_max_chars
-        if len(text) <= limit or "AAE" in text:
-            return text
-        parts = re.split(r"(?<=[。！？!?；;])", text)
-        short = ""
-        for part in parts:
-            if len(short) + len(part) > limit:
-                break
-            short += part
-        short = short.strip()
-        if short:
-            return short
-        return text[: max(0, limit - 1)].rstrip() + "…"
 
     def _apply_media_policy(self, answer: str, question: str, scope_id: str) -> str:
         """Allow one emotion-matched image, with explicit requests bypassing cooldown."""
@@ -916,8 +899,34 @@ class MessageDispatcher:
             answer = "模型暂时不可用，稍后再试。"
         answer = self._sanitize_addressing(answer or "（模型没有返回内容）").strip()[: self.max_reply_chars]
         answer = self._enforce_member_address(answer, scope_id)
-        if deck_context:
-            answer = self._shorten_deck_review(answer)
+
+        # Ask once for a single 40-60 character sentence.  Never cut text
+        # mid-way; fall back to a complete deterministic sentence instead.
+        if deck_context and len(answer) > self.deck_review_max_chars:
+            messages[0]["content"] += (
+                "\n\n上一轮炉石点评太长。请只保留一句完整短评，40-60字，绝对不超过80字；"
+                "不要分点、不要复述牌表、不要代码、不要来源链接。"
+            )
+            try:
+                chat_short = getattr(self.llm, "chat_with_mode", None)
+                if callable(chat_short):
+                    retry_short = await chat_short(messages, mode=mode)
+                else:
+                    retry_short = await self.llm.chat(messages)
+                retry_short = self._sanitize_addressing(retry_short or "").strip()
+                retry_short = self._enforce_member_address(retry_short, scope_id)
+                if retry_short and len(retry_short) <= self.deck_review_max_chars:
+                    answer = retry_short
+                elif self.deck_advisor is not None:
+                    fallback = self.deck_advisor.short_review(question, scope_id)
+                    if fallback:
+                        answer = fallback
+            except LLMError:
+                LOG.exception("short deck review regeneration failed")
+                if self.deck_advisor is not None:
+                    fallback = self.deck_advisor.short_review(question, scope_id)
+                    if fallback:
+                        answer = fallback
         recent_replies = self.recent_reply_texts(scope_id, 3)
         if answer != "模型暂时不可用，稍后再试。" and self.is_duplicate_reply(
             answer, scope_id, recent_replies
