@@ -12,7 +12,7 @@
 ![DeepSeek](https://img.shields.io/badge/LLM-DeepSeek-4B6BFB)
 ![OneBot11](https://img.shields.io/badge/Protocol-OneBot11-2EA043)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
-![Tests](https://img.shields.io/badge/tests-81%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-82%20passed-brightgreen)
 
 </div>
 
@@ -52,7 +52,7 @@ Sakura-bot 是一个运行在自己电脑上的 QQ 群机器人：
 | 幂等 | 事件去重 + 出站幂等，重连/重启不重复回复 |
 | 记忆 | 群记忆、用户记忆、用户画像，人工审核后生效 |
 | 回复去重 | 最近回复重复时自动换一种说法 |
-| 测试 | 81 个单元测试（无本地素材时 9 个媒体测试自动跳过） |
+| 测试 | 82 个单元测试（无本地素材时 9 个媒体测试自动跳过） |
 
 ---
 
@@ -407,7 +407,7 @@ cd bot
 python -m unittest discover -s tests -v
 ```
 
-当前 **81 tests OK**（无本地素材时 9 个媒体测试自动跳过），覆盖：
+当前 **82 tests OK**（无本地素材时 9 个媒体测试自动跳过），覆盖：
 
 - OneBot 事件解析
 - 隐私/同意/退出
